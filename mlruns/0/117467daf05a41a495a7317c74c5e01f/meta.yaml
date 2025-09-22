@@ -1,0 +1,15 @@
+artifact_uri: file:///D:/Data_science/Projects/End_to_End_ml_project_chest_CT_scan/mlruns/0/117467daf05a41a495a7317c74c5e01f/artifacts
+end_time: 1758546224935
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 117467daf05a41a495a7317c74c5e01f
+run_name: salty-snail-558
+run_uuid: 117467daf05a41a495a7317c74c5e01f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1758546211689
+status: 4
+tags: []
+user_id: prosh

@@ -1,10 +1,13 @@
 import os
 from pathlib import Path
 from chestCancerClassifier.constants import *
-from chestCancerClassifier.utils.common import read_yaml, create_directories
+from chestCancerClassifier.utils.common import (read_yaml,
+                                                create_directories,
+                                                save_json)
 from chestCancerClassifier.entity.config_entity import (DataIngestionConfig, 
                                                         PrepareBaseModelConfig,
-                                                        TrainingConfig)
+                                                        TrainingConfig,
+                                                        EvaluationConfig)
 
 class ConfigurationManager:
     def __init__(
@@ -82,4 +85,16 @@ class ConfigurationManager:
         )
 
         return traning_config
+    
 
+    def get_evalution_config(self) -> EvaluationConfig:
+        eval_config = EvaluationConfig(
+            path_of_model="artifacts/training/model.h5",
+            training_data="artifacts/data_ingestion/chest_CT_scan_data",
+            mlflow_uri="https://dagshub.com/proshanta000/End_to_End_ml_project_chest_CT_scan.mlflow",
+            all_params= self.params,
+            params_image_size= self.params.IMAGE_SIZE,
+            params_batch_size= self.params.BATCH_SIZE
+
+        )
+        return eval_config
