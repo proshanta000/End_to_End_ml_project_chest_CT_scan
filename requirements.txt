@@ -16,5 +16,5 @@ types-pyYAML
 scipy
 Flask
 Flask-Cors
-setuptools==65.5.0
+setuptools
 -e .
