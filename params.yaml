@@ -2,13 +2,14 @@ AUGMENTATION: True
 IMAGE_SIZE: [224, 224, 3] # as per VGG 16 model
 BATCH_SIZE: 16
 INCLUDE_TOP: False
-EPOCHS: 10
+EPOCHS: 5
 CLASSES: 4
 WEIGHTS: imagenet
 LEARNING_RATE: 0.01
 
 # Parameters for the callback
 CALLBACKS:
+  CHECKPOINT_FILEPATH: "artifacts/training/checkpoint.h5"
   ReduceLROnPlateau:
     monitor: 'val_loss'
     factor: 0.1

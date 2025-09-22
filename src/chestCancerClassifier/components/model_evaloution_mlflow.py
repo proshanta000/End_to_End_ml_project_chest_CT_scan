@@ -5,58 +5,56 @@ import mlflow.keras
 from urllib.parse import urlparse
 from chestCancerClassifier.utils.common import save_json
 from chestCancerClassifier.entity.config_entity import EvaluationConfig
-
+import json
 
 
 class Evalution:
     def __init__(self, config: EvaluationConfig):
-        self.config= config
-
+        self.config = config
 
     def _valid_generator(self):
-        # ... ( code for setting up generators) ...
+        # We assume the data is already pre-split into train/valid directories.
+        # Therefore, we do not need the validation_split parameter.
         datagenerator_kwargs = dict(
-            rescale = 1./255,
-            validation_split= 0.20
+            rescale=1. / 255
         )
         dataflow_kwargs = dict(
-            target_size = self.config.params_image_size[:-1],
-            batch_size= self.config.params_batch_size,
+            target_size=self.config.params_image_size[:-1],
+            batch_size=self.config.params_batch_size,
             interpolation="bilinear"
         )
         valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
             **datagenerator_kwargs
         )
         self.valid_generator = valid_datagenerator.flow_from_directory(
-            directory = self.config.training_data,
-            subset = "validation",
-            shuffle = False,
+            directory=self.config.validation_data,
+            shuffle=False,
             **dataflow_kwargs
         )
 
     @staticmethod
-    def load_model(path:Path) -> tf.keras.Model:
+    def load_model(path: Path) -> tf.keras.Model:
         return tf.keras.models.load_model(path)
-    
 
     def evaluation(self):
         self.model = self.load_model(self.config.path_of_model)
         self._valid_generator()
         self.score = self.model.evaluate(self.valid_generator)
         self.save_score()
-    
+
     def save_score(self):
         score = {"loss": self.score[0], "accuracy": self.score[1]}
         save_json(path=Path("scores.json"), data=score)
-    
+
     def log_into_mlflow(self):
         mlflow.set_registry_uri(self.config.mlflow_uri)
         tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
         with mlflow.start_run():
+            # Log all parameters, including nested ones
             mlflow.log_params(self.config.all_params)
-            
-            # CORRECTED: Log each metric individually
+
+            # Log each metric individually
             mlflow.log_metric(
                 key="loss",
                 value=self.score[0]
@@ -65,14 +63,10 @@ class Evalution:
                 key="accuracy",
                 value=self.score[1]
             )
-            
+
             # Model registry does not work with file store
             if tracking_url_type_store != "file":
                 mlflow.keras.log_model(self.model, "model",
                                        registered_model_name="VGG16Model")
-                # Register the model
-                # There are other ways to use the Model Registry, which depends on the use case,
-                # please refer to the doc for more information:
-                # https://mlflow.org/docs/latest/model-registry.html#api-workflow
             else:
                 mlflow.keras.log_model(self.model, "model")

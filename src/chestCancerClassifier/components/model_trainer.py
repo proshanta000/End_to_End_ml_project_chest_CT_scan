@@ -2,69 +2,66 @@ import os
 import urllib.request as request
 from zipfile import ZipFile
 import tensorflow as tf
+from collections import Counter
 import time
 from chestCancerClassifier.entity.config_entity import TrainingConfig
 
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from pathlib import Path
-# Set TensorFlow to run eagerly. This can be useful for debugging but may slow down training.
-tf.config.run_functions_eagerly(True)
+# Note: Eager execution is useful for debugging but should be disabled for performance in production.
+# tf.config.run_functions_eagerly(True)
 
-# Define the Training class for the model training pipeline
+
+# This function is a simple utility to get a list of all images in the dataset
+def get_image_paths(data_dir):
+    image_paths = []
+    for root, _, files in os.walk(data_dir):
+        for file in files:
+            if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                image_paths.append(os.path.join(root, file))
+    return image_paths
+
 class Training:
-    # Constructor to initialize the class with a configuration object
     def __init__(self, config: TrainingConfig):
         self.config = config
-        self.model = None
 
-    # Method to load the pre-trained base model
     def get_base_model(self):
-        # The model's architecture and weights are loaded from the specified path
-        self.model = tf.keras.models.load_model(
-            self.config.updated_base_model_path
-        )
+        # Load the pre-trained base model from the specified path
+        self.model = tf.keras.models.load_model(self.config.updated_base_model_path)
     
-    # A dedicated method to re-compile the loaded model. This is crucial as
-    # the optimizer's state is not saved with the model.
+    # A dedicated method to compile the model.
     def compile_model(self):
         self.model.compile(
-            # Use the SGD optimizer with the learning rate from the config
             optimizer=tf.keras.optimizers.SGD(learning_rate=self.config.params_learning_rate),
-            # Use CategoricalCrossentropy for multi-class classification
             loss=tf.keras.losses.CategoricalCrossentropy(),
-            # Track accuracy during training
             metrics=["accuracy"]
         )
 
-    # Method to create and configure data generators for training and validation
     def train_valid_generator(self):
-        # Common data augmentation and preprocessing parameters
+        # Define the image data generators for training and validation
         datagenerator_kwargs = dict(
-            rescale = 1./255, # Scale pixel values to a [0, 1] range
-            validation_split= 0.20 # Reserve 20% of data for validation
+            rescale=1./255
         )
-        # Parameters for the flow_from_directory method
+
         dataflow_kwargs = dict(
-            target_size = self.config.params_image_size[:-1], # Get the image dimensions (height, width)
-            batch_size= self.config.params_batch_size, # Set the batch size
-            interpolation="bilinear" # Method for resizing images
+            target_size=self.config.params_image_size[:-1],
+            batch_size=self.config.params_batch_size,
+            interpolation="bilinear"
         )
         
-        # Create a data generator for the validation set (no augmentation)
+        # We no longer need the validation_split as we are using separate folders
         valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
             **datagenerator_kwargs
         )
-        # Create the validation data generator from the directory
+
+        # Point the generator directly to the 'valid' folder
         self.valid_generator = valid_datagenerator.flow_from_directory(
-            directory = self.config.training_data,
-            subset = "validation",
-            shuffle = False, # Do not shuffle validation data
+            directory=os.path.join(self.config.training_data, "valid"),
+            shuffle=False,
             **dataflow_kwargs
         )
 
-        # Check if data augmentation should be applied to the training set
         if self.config.params_is_augmentation:
-            # Create a training data generator with augmentation
             train_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
                 rotation_range=40,
                 horizontal_flip=True,
@@ -75,50 +72,62 @@ class Training:
                 **datagenerator_kwargs
             )
         else:
-            # If no augmentation, use the same generator as the validation set
-            train_datagenerator=valid_datagenerator
-        
-        # Create the training data generator from the directory
+            train_datagenerator = valid_datagenerator
+
+        # Point the generator directly to the 'train' folder
         self.train_generator = train_datagenerator.flow_from_directory(
-            directory=self.config.training_data,
-            subset="training",
-            shuffle=True, # Shuffle training data
+            directory=os.path.join(self.config.training_data, "train"),
+            shuffle=True,
             **dataflow_kwargs
         )
-    
-    # Static method to save the trained model
+        
+        print("Classes and their indices found by the generator:", self.train_generator.class_indices)
+
+
+    # This is the new function to calculate class weights
+    def calculate_class_weights(self):
+        # Get the class indices from the training generator
+        labels = self.train_generator.labels
+        
+        # Count the occurrences of each class
+        class_counts = Counter(labels)
+        total_samples = sum(class_counts.values())
+        num_classes = len(class_counts)
+        
+        # Calculate the class weights using the inverse of the class frequency
+        class_weights = {}
+        for cls_id, count in class_counts.items():
+            class_weights[cls_id] = total_samples / (num_classes * count)
+        
+        print(f"Calculated class weights: {class_weights}")
+        return class_weights
+
     @staticmethod
     def save_model(path: Path, model: tf.keras.Model):
         model.save(path)
-    
-    # Method to train the model
+
     def train(self):
-        # Calculate steps per epoch for training and validation
-        self.steps_per_epoch = self.train_generator.samples // self.train_generator.batch_size
-        self.validation_steps = self.valid_generator.samples // self.valid_generator.batch_size
+        # The model must be compiled before training
+        self.compile_model()
         
-        # Access the nested parameters for the callback from the config
-        callback_params = self.config.params_callbacks.ReduceLROnPlateau
+        # Calculate the class weights
+        class_weights = self.calculate_class_weights()
 
-        # Define the ReduceLROnPlateau callback with parameters from the config
-        lr_scheduler = ReduceLROnPlateau(
-            monitor=callback_params.monitor,
-            factor=callback_params.factor,
-            patience=callback_params.patience,
-            min_lr=float(callback_params.min_lr)
-        )
+        # Define the callbacks
+        callbacks = [
+            # Removed EarlyStopping to ensure the model trains for the full number of epochs
+            tf.keras.callbacks.ModelCheckpoint(self.config.trained_model_path, save_best_only=True)
+        ]
 
-        # Train the model using the data generators and defined callbacks
+        # Fit the model with the class weights
         self.model.fit(
             self.train_generator,
             epochs=self.config.params_epochs,
-            steps_per_epoch=self.steps_per_epoch,
-            validation_steps = self.validation_steps,
-            validation_data = self.valid_generator,
-            callbacks=[lr_scheduler] # Pass the callback in a list
+            validation_data=self.valid_generator,
+            callbacks=callbacks,
+            class_weight=class_weights  # The class weights are applied here
         )
-
-        # Save the final trained model
+        
         self.save_model(
             path=self.config.trained_model_path,
             model=self.model

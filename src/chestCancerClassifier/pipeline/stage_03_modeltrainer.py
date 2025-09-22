@@ -6,6 +6,9 @@ from chestCancerClassifier import logger
 # Define a constant for the stage name, used for logging
 STAGE_NAME = "Training"
 
+
+
+
 # Define the main pipeline class for the model training stage
 class ModelTraningPipeline:
     def __init__(self):

@@ -19,7 +19,7 @@ class ModelEvalutationPipeline:
         eval_config = config.get_evalution_config()
         evaluation= Evalution(eval_config)
         evaluation.evaluation()
-        #evaluation.log_into_mlflow()
+        evaluation.log_into_mlflow()
     
 
 # Entry point of the script

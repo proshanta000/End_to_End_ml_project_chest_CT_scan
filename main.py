@@ -10,7 +10,7 @@ os.environ["MLFLOW_TRACKING_USERNAME"]="proshanta000"
 os.environ["MLFLOW_TRACKING_PASSWORD"]="d856c7bfcbe6c5c979320b3160b26a5a3e1f4355"
 
 
-STAGE_NAME = "Data Ingestion Stage"
+"""STAGE_NAME = "Data Ingestion Stage"
 
 
 if __name__=='__main__':
@@ -37,10 +37,10 @@ try:
 
 except Exception as e:
     logger.exception(e)
-    raise e
+    raise e"""
 
 
-STAGE_NAME = "Training"
+"""STAGE_NAME = "Training"
 
 try:
     logger.info(f"**********************")
@@ -51,7 +51,7 @@ try:
 
 except Exception as e:
     logger.exception(e)
-    raise e
+    raise e"""
 
 
 STAGE_NAME = "Model Evaluation"
