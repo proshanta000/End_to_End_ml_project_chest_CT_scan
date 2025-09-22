@@ -4,7 +4,7 @@ from chestCancerClassifier.pipeline.stage_02_prepare_base_model import PrepareBa
 from chestCancerClassifier.pipeline.stage_03_modeltrainer import ModelTraningPipeline
 
 
-STAGE_NAME = "Data Ingestion Stage"
+"""STAGE_NAME = "Data Ingestion Stage"
 
 
 if __name__=='__main__':
@@ -31,7 +31,7 @@ try:
 
 except Exception as e:
     logger.exception(e)
-    raise e
+    raise e"""
 
 
 STAGE_NAME = "Training"

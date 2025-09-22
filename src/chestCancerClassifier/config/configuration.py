@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from chestCancerClassifier.constants import *
 from chestCancerClassifier.utils.common import read_yaml, create_directories
 from chestCancerClassifier.entity.config_entity import (DataIngestionConfig, 
@@ -62,6 +63,9 @@ class ConfigurationManager:
             Path(traning.root_dir)
         ])
 
+        # Access the entire nested CALLBACKS section
+        callbacks_params = params.CALLBACKS
+        
         traning_config = TrainingConfig(
             root_dir=Path(traning.root_dir),
             trained_model_path=Path(traning.trained_model_path),
@@ -69,9 +73,12 @@ class ConfigurationManager:
             training_data=Path(training_data),
             params_epochs=params.EPOCHS,
             params_batch_size=params.BATCH_SIZE,
-            Params_is_augmentation=params.AUGMENTATION,
+            params_is_augmentation=params.AUGMENTATION,
             params_image_size=params.IMAGE_SIZE,
             params_learning_rate=params.LEARNING_RATE,
+            
+            # Pass the nested parameters to the dataclass
+            params_callbacks=callbacks_params
         )
 
         return traning_config

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from box import Box
 
 @dataclass(frozen=True)
 class DataIngestionConfig:
@@ -29,6 +30,7 @@ class TrainingConfig:
     training_data: Path
     params_epochs: int
     params_batch_size: int
-    Params_is_augmentation: bool
+    params_is_augmentation: bool
     params_image_size: list
     params_learning_rate: float
+    params_callbacks: Box ## Useing Box for nested YAML data
