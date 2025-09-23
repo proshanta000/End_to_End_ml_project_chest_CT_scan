@@ -1,17 +1,24 @@
-AUGMENTATION: True
-IMAGE_SIZE: [224, 224, 3] # as per VGG 16 model
-BATCH_SIZE: 16
-INCLUDE_TOP: False
-EPOCHS: 5
-CLASSES: 4
-WEIGHTS: imagenet
+IMAGE_SIZE: [224, 224, 3]
 LEARNING_RATE: 0.01
+INCLUDE_TOP: False
+WEIGHTS: "imagenet"
+CLASSES: 4
 
-# Parameters for the callback
+
+EPOCHS: 20
+BATCH_SIZE: 16
+AUGMENTATION: True
+
+
 CALLBACKS:
-  CHECKPOINT_FILEPATH: "artifacts/training/checkpoint.h5"
-  ReduceLROnPlateau:
-    monitor: 'val_loss'
-    factor: 0.1
+  early_stopping:
+    monitor: "val_loss"
     patience: 3
-    min_lr: 1e-6
+    verbose: 1
+  model_checkpoint:
+    save_best_only: True
+    monitor: "val_loss"
+  reduce_lr_on_plateau:
+    monitor: "val_loss"
+    factor: 0.1
+    patience: 2

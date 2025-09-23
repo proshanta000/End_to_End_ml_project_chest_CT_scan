@@ -35,6 +35,7 @@ class TrainingConfig:
     trained_model_path: Path  # Path to save the final trained model
     updated_base_model_path: Path  # Path to the base model from the preparation stage
     training_data: Path  # Path to the training dataset
+    validation_data: Path # Path to the validation dataset
     params_epochs: int  # Number of training epochs
     params_batch_size: int  # Number of samples per batch
     params_is_augmentation: bool  # Flag to enable/disable data augmentation

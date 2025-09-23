@@ -8,6 +8,8 @@ from chestCancerClassifier.entity.config_entity import (DataIngestionConfig,
                                                        PrepareBaseModelConfig,
                                                        TrainingConfig,
                                                        EvaluationConfig)
+# Import the Keras callbacks
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 
 # This class manages the configuration settings for the entire project pipeline.
 # It reads settings from 'config.yaml' and 'params.yaml' and provides them
@@ -87,12 +89,30 @@ class ConfigurationManager:
         
         # Define the path to the training data directory
         training_data = os.path.join(self.config.data_ingestion.unzip_dir, "chest_CT_scan_data", "train")
+        # Define the path to the validation data directory
+        validation_data = os.path.join(self.config.data_ingestion.unzip_dir, "chest_CT_scan_data", "valid")
         
         # Create the training artifacts directory
         create_directories([Path(traning.root_dir)])
 
-        # Access the entire nested CALLBACKS section from params
-        callbacks_params = params.CALLBACKS
+        # Instantiate the callbacks here using parameters from params.yaml
+        callbacks = {
+            "early_stopping": EarlyStopping(
+                monitor=params.CALLBACKS.early_stopping.monitor,
+                patience=params.CALLBACKS.early_stopping.patience,
+                verbose=params.CALLBACKS.early_stopping.verbose
+            ),
+            "model_checkpoint": ModelCheckpoint(
+                filepath=Path(traning.trained_model_path),
+                save_best_only=params.CALLBACKS.model_checkpoint.save_best_only,
+                monitor=params.CALLBACKS.model_checkpoint.monitor
+            ),
+            "reduce_lr_on_plateau": ReduceLROnPlateau(
+                monitor=params.CALLBACKS.reduce_lr_on_plateau.monitor,
+                factor=params.CALLBACKS.reduce_lr_on_plateau.factor,
+                patience=params.CALLBACKS.reduce_lr_on_plateau.patience
+            )
+        }
         
         # Create a TrainingConfig object with all necessary parameters
         traning_config = TrainingConfig(
@@ -100,14 +120,14 @@ class ConfigurationManager:
             trained_model_path=Path(traning.trained_model_path),
             updated_base_model_path=Path(prepare_base_model.updated_base_model_path),
             training_data=Path(training_data),
+            validation_data=Path(validation_data),
             params_epochs=params.EPOCHS, # Number of training epochs
             params_batch_size=params.BATCH_SIZE, # Batch size for training
             params_is_augmentation=params.AUGMENTATION,  # Enable/disable data augmentation
             params_image_size=params.IMAGE_SIZE,  # Set the input image size
             params_learning_rate=params.LEARNING_RATE,  # Define the learning rate
-            
-            # Pass the nested parameters to the dataclass
-            params_callbacks=callbacks_params  # Define the callbacks for training
+            # Pass the correctly instantiated callback objects to the dataclass
+            params_callbacks=callbacks
         )
 
         return traning_config
